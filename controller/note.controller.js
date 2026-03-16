@@ -14,6 +14,7 @@ const create = async (req,res) => {
     })
 
 }
+
 const deleteNote = async(req,res)=>{
     const {title} = req.body
     const response = await Notes.findOneAndDelete({title})
