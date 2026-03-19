@@ -1,12 +1,14 @@
 const mongoose = require("mongoose")
 const Notes = require("../model/notemodel")
 
+
 const create = async (req,res) => {
     const { title, description } = req.body
 
     const newNote = await Notes.create({
         title,
-        description
+        description,
+        user:req.user.id
     })
     res.status(200).json({
         "message": "New note created",
@@ -25,9 +27,10 @@ const deleteNote = async(req,res)=>{
 const updateNote = async(req,res)=>{
     const {title,description} =  req.body
 
+    const note = await Notes.findOne({title})
     const responce = await Notes.findOneAndUpdate(
         {title},
-        {description},
+        {description: note.description + " " + description},
         {new:true}
     )
     res.status(200).json({
