@@ -39,4 +39,17 @@ const updateNote = async(req,res)=>{
     })
 
 }
-module.exports = {create,deleteNote,updateNote}
+const getNotes = async (req,res)=>{
+    const userId = req.user.id
+    try {
+        const notes = await Notes.find({user:userId})
+        res.status(200).json({
+            notes
+        })
+    } catch (error) {
+        res.status(500).json({"message":"internal server error"})
+    }
+    
+    
+}
+module.exports = {create,deleteNote,updateNote,getNotes}
