@@ -2,6 +2,7 @@ const User = require('../model/authmodel')
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const dotenv = require('dotenv')
+const { useState } = require('react')
 
 dotenv.config()
 
@@ -28,7 +29,12 @@ const signup = async (req, res) => {
 
         if (newUser) {
             const token = jwt.sign({ id:newUser._id }, process.env.JWT_SECRATE)
-            res.cookie("token", token)
+            res.cookie("token", token, {
+            httpOnly: true,
+            secure: false,        // true only in production (https)
+            sameSite: "lax",
+            path: "/"       // VERY IMPORTANT for frontend requests
+        })
 
             res.status(200).json({
                 "message": "user created",
@@ -48,31 +54,29 @@ const login = async (req, res) => {
     
     try {
         const loginUser = await User.findOne({email})
+        if(!loginUser){
+            return res.status(404).json({"message":"user not found"})
+        }
         const responce = await bcrypt.compare(password,loginUser.password)
         if(!responce){
             return res.status(401).json({"message":"invalid login"})
         }
         const token = jwt.sign({id:loginUser._id},process.env.JWT_SECRATE)
-        res.cookie("token",token)
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: false,        // true only in production (https)
+            sameSite: "lax",
+            path: "/"       // VERY IMPORTANT for frontend requests
+        })
         res.status(200).json({"message":"user sucessfully Loggedin"})
     } catch (error) {
         console.log(error)
         res.status(500).json({"message":"internal server error"})
     }
-    if(!loginUser){
-        return res.status(401).json({"message":"invalid creadentials"})
-    }
-
 }
 const logout = async (req, res) => {
-    const { email } = req.body
+    
     try {
-        const isUser = await User.findOne({ email })
-        console.log(isUser)
-        if (!isUser) {
-            return res.status(404).json({ "message": "user doese't exist" })
-
-        }
         res.clearCookie("token")
 
         res.json({ "message": "user logged out" })
@@ -84,4 +88,24 @@ const logout = async (req, res) => {
 
     }
 }
-module.exports = { signup, logout ,login}
+const checkAuth = async (req,res)=>{
+    const token = req.cookies.token
+    console.log(token)
+    if(!token){
+        return res.status(401).json({isAuth:false})
+    }
+    try {
+        const decoded = await jwt.verify(token,process.env.JWT_SECRATE)
+        return res.status(200).json({
+            isAuth:true,
+            id:decoded.id
+        })
+    } catch (error) {
+        return res.status(401).json({
+            "message":"internal server error",
+            isAuth:false
+        })
+    }
+    
+}
+module.exports = { signup, logout ,login,checkAuth}
